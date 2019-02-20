@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component } from "react";
 import {
   StyleSheet,
   Text,
@@ -12,10 +12,11 @@ import {
   ScrollView,
   AppState,
   Dimensions,
-} from 'react-native';
-import BleManager from 'react-native-ble-manager';
+  TouchableOpacity
+} from "react-native";
+import BleManager from "react-native-ble-manager";
 
-const window = Dimensions.get('window');
+const window = Dimensions.get("window");
 const ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
 
 const BleManagerModule = NativeModules.BleManager;
@@ -23,49 +24,68 @@ const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 
 export default class App extends Component {
   constructor() {
-    super()
+    super();
 
     this.state = {
       scanning: false,
       peripherals: new Map(),
-      appState: '',
-      temp: null
-    }
+      appState: "",
+      temp: 0
+    };
 
     this.handleDiscoverPeripheral = this.handleDiscoverPeripheral.bind(this);
     this.handleStopScan = this.handleStopScan.bind(this);
-    this.handleUpdateValueForCharacteristic = this.handleUpdateValueForCharacteristic.bind(this);
-    this.handleDisconnectedPeripheral = this.handleDisconnectedPeripheral.bind(this);
+    this.handleUpdateValueForCharacteristic = this.handleUpdateValueForCharacteristic.bind(
+      this
+    );
+    this.handleDisconnectedPeripheral = this.handleDisconnectedPeripheral.bind(
+      this
+    );
     this.handleAppStateChange = this.handleAppStateChange.bind(this);
   }
 
   componentDidMount() {
-    AppState.addEventListener('change', this.handleAppStateChange);
+    AppState.addEventListener("change", this.handleAppStateChange);
 
     BleManager.start({ showAlert: false });
 
-    this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral);
-    this.handlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.handleStopScan);
-    this.handlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.handleDisconnectedPeripheral);
-    this.handlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.handleUpdateValueForCharacteristic);
-
+    this.handlerDiscover = bleManagerEmitter.addListener(
+      "BleManagerDiscoverPeripheral",
+      this.handleDiscoverPeripheral
+    );
+    this.handlerStop = bleManagerEmitter.addListener(
+      "BleManagerStopScan",
+      this.handleStopScan
+    );
+    this.handlerDisconnect = bleManagerEmitter.addListener(
+      "BleManagerDisconnectPeripheral",
+      this.handleDisconnectedPeripheral
+    );
+    this.handlerUpdate = bleManagerEmitter.addListener(
+      "BleManagerDidUpdateValueForCharacteristic",
+      this.handleUpdateValueForCharacteristic
+    );
 
     BleManager.enableBluetooth()
       .then(() => {
         // Success code
-        console.log('The bluetooth is already enabled or the user confirm');
+        console.log("The bluetooth is already enabled or the user confirm");
       })
-      .catch((error) => {
+      .catch(error => {
         // Failure code
-        console.log('The user refuse to enable bluetooth');
+        console.log("The user refuse to enable bluetooth");
       });
 
-    if (Platform.OS === 'android' && Platform.Version >= 23) {
-      PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION).then((result) => {
+    if (Platform.OS === "android" && Platform.Version >= 23) {
+      PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION
+      ).then(result => {
         if (result) {
           console.log("Permission is OK");
         } else {
-          PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION).then((result) => {
+          PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION
+          ).then(result => {
             if (result) {
               console.log("User accept");
             } else {
@@ -75,14 +95,16 @@ export default class App extends Component {
         }
       });
     }
-
   }
 
   handleAppStateChange(nextAppState) {
-    if (this.state.appState.match(/inactive|background/) && nextAppState === 'active') {
-      console.log('App has come to the foreground!')
-      BleManager.getConnectedPeripherals([]).then((peripheralsArray) => {
-        console.log('Connected peripherals: ' + peripheralsArray.length);
+    if (
+      this.state.appState.match(/inactive|background/) &&
+      nextAppState === "active"
+    ) {
+      console.log("App has come to the foreground!");
+      BleManager.getConnectedPeripherals([]).then(peripheralsArray => {
+        console.log("Connected peripherals: " + peripheralsArray.length);
       });
     }
     this.setState({ appState: nextAppState });
@@ -103,11 +125,17 @@ export default class App extends Component {
       peripherals.set(peripheral.id, peripheral);
       this.setState({ peripherals });
     }
-    console.log('Disconnected from ' + data.peripheral);
+    console.log("Disconnected from " + data.peripheral);
   }
 
   handleUpdateValueForCharacteristic(data) {
-    console.log('Received data from ' + data.peripheral + ' characteristic ' + data.characteristic, data.value);
+    console.log(
+      "Received data from " +
+        data.peripheral +
+        " characteristic " +
+        data.characteristic,
+      data.value
+    );
     let byteArr = new Uint8Array(data.value);
     let temp = ((byteArr[2] << 8) | byteArr[1]) / 100.0;
     this.setState({ temp });
@@ -115,24 +143,24 @@ export default class App extends Component {
   }
 
   handleStopScan() {
-    console.log('Scan is stopped');
+    console.log("Scan is stopped");
     this.setState({ scanning: false });
   }
 
   startScan() {
     if (!this.state.scanning) {
       this.setState({ peripherals: new Map() });
-      BleManager.scan([], 3, false).then((results) => {
-        console.log('Scanning...');
+      BleManager.scan([], 6, false).then(results => {
+        console.log("Scanning...");
         this.setState({ scanning: true });
       });
     }
   }
 
   retrieveConnected() {
-    BleManager.getConnectedPeripherals([]).then((results) => {
+    BleManager.getConnectedPeripherals([]).then(results => {
       if (results.length == 0) {
-        console.log('No connected peripherals')
+        console.log("No connected peripherals");
       }
       var peripherals = this.state.peripherals;
       for (var i = 0; i < results.length; i++) {
@@ -145,11 +173,11 @@ export default class App extends Component {
   }
 
   handleDiscoverPeripheral(peripheral) {
-    peripheral.name != null && console.log("Got", peripheral.name)
+    peripheral.name != null && console.log("Got", peripheral.name);
     let peripherals = this.state.peripherals;
     if (!peripherals.has(peripheral.id)) {
       peripheral.name !== null && peripherals.set(peripheral.id, peripheral);
-      peripheral.name !== null && this.setState({ peripherals })
+      peripheral.name !== null && this.setState({ peripherals });
     }
   }
 
@@ -159,42 +187,45 @@ export default class App extends Component {
       if (peripheral.connected) {
         BleManager.disconnect(peripheral.id);
       } else {
-        BleManager.connect(peripheral.id).then(() => {
-          let peripherals = this.state.peripherals;
-          let p = peripherals.get(peripheral.id);
-          if (p) {
-            p.connected = true;
-            peripherals.set(peripheral.id, p);
-            this.setState({ peripherals });
-          }
-          console.log('Connected to ' + peripheral.id);
+        BleManager.connect(peripheral.id)
+          .then(() => {
+            let peripherals = this.state.peripherals;
+            let p = peripherals.get(peripheral.id);
+            if (p) {
+              p.connected = true;
+              peripherals.set(peripheral.id, p);
+              this.setState({ peripherals });
+            }
+            console.log("Connected to " + peripheral.id);
 
-
-          setTimeout(() => {
-
-            BleManager.retrieveServices(peripheral.id).then((peripheralInfo) => {
-              console.log(peripheralInfo);
-              var service = '1809';
-              var bakeCharacteristic = '2a1c';
-              setTimeout(() => {
-
-                BleManager.startNotification(peripheral.id, service, bakeCharacteristic)
-                  .then(() => {
-                    // Success code
-                    // console.log('Notification started');
-                  })
-                  .catch((error) => {
-                    // Failure code
-                    console.log(error, "err");
-                  });
-
-              }, 200);
-            });
-
-          }, 900);
-        }).catch((error) => {
-          console.log('Connection error', error);
-        });
+            setTimeout(() => {
+              BleManager.retrieveServices(peripheral.id).then(
+                peripheralInfo => {
+                  console.log(peripheralInfo);
+                  var service = "1809";
+                  var bakeCharacteristic = "2a1c";
+                  setTimeout(() => {
+                    BleManager.startNotification(
+                      peripheral.id,
+                      service,
+                      bakeCharacteristic
+                    )
+                      .then(() => {
+                        // Success code
+                        // console.log('Notification started');
+                      })
+                      .catch(error => {
+                        // Failure code
+                        console.log(error, "err");
+                      });
+                  }, 200);
+                }
+              );
+            }, 900);
+          })
+          .catch(error => {
+            console.log("Connection error", error);
+          });
       }
     }
   }
@@ -205,32 +236,91 @@ export default class App extends Component {
 
     return (
       <View style={styles.container}>
-        {this.state.temp && (
-          <TouchableHighlight style={{ marginTop: 40, margin: 20, padding: 20, backgroundColor: '#ccc' }} onPress={() => this.startScan()}>
-            <Text>Temperatur is : {this.state.temp}</Text>
-          </TouchableHighlight>)}
-        <TouchableHighlight style={{ marginTop: 40, margin: 20, padding: 20, backgroundColor: '#ccc' }} onPress={() => this.startScan()}>
-          <Text>Scan Bluetooth ({this.state.scanning ? 'on' : 'off'})</Text>
-        </TouchableHighlight>
-        <TouchableHighlight style={{ marginTop: 0, margin: 20, padding: 20, backgroundColor: '#ccc' }} onPress={() => this.retrieveConnected()}>
+        {this.state.temp > 0 && (
+          <TouchableOpacity
+            accessible={true}
+            accessibilityLabel="Scan Bluetooth"
+            accessibilityHint="Tap to scan the nearby devices"
+
+            style={{
+              marginTop: 40,
+              margin: 20,
+              padding: 20,
+              backgroundColor: "#ccc"
+            }}
+            onPress={() => this.startScan()}
+          >
+            <Text style={{ textAlign: "center" }}>
+              Temperature is : {this.state.temp}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          accessible={true}
+          accessibilityLabel="Scan Bluetooth"
+          accessibilityHint="Tap to scan the nearby devices"
+
+          style={{
+            marginTop: 40,
+            margin: 20,
+            padding: 20,
+            backgroundColor: "#ccc"
+          }}
+          onPress={() => this.startScan()}
+        >
+          <Text>Scan Bluetooth ({this.state.scanning ? "on" : "off"})</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          accessible={true}
+          accessibilityLabel="Retrive Button"
+          accessibilityHint="Tap to retrive the connected devices"
+          style={{
+            marginTop: 0,
+            margin: 20,
+            padding: 20,
+            backgroundColor: "#ccc"
+          }}
+          onPress={() => this.retrieveConnected()}
+        >
           <Text>Retrieve connected peripherals</Text>
-        </TouchableHighlight>
+        </TouchableOpacity>
+
         <ScrollView style={styles.scroll}>
-          {(list.length == 0) &&
+          {list.length == 0 && (
             <View style={{ flex: 1, margin: 20 }}>
-              <Text style={{ textAlign: 'center' }}>No peripherals</Text>
+              <Text style={{ textAlign: "center" }}>No peripherals</Text>
             </View>
-          }
+          )}
           <ListView
             enableEmptySections={true}
             dataSource={dataSource}
-            renderRow={(item) => {
-              const color = item.connected ? 'green' : '#fff';
+            renderRow={item => {
+              const color = item.connected ? "green" : "#fff";
               return (
                 <TouchableHighlight onPress={() => this.connectDevice(item)}>
                   <View style={[styles.row, { backgroundColor: color }]}>
-                    <Text style={{ fontSize: 12, textAlign: 'center', color: '#333333', padding: 10 }}>{item.name}</Text>
-                    <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>{item.id}</Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        textAlign: "center",
+                        color: "#333333",
+                        padding: 10
+                      }}
+                    >
+                      {item.name}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 8,
+                        textAlign: "center",
+                        color: "#333333",
+                        padding: 10
+                      }}
+                    >
+                      {item.id}
+                    </Text>
                   </View>
                 </TouchableHighlight>
               );
@@ -245,16 +335,16 @@ export default class App extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     width: window.width,
     height: window.height
   },
   scroll: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
-    margin: 10,
+    backgroundColor: "#f0f0f0",
+    margin: 10
   },
   row: {
     margin: 10
-  },
+  }
 });
